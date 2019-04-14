@@ -73,12 +73,6 @@ func main() {
 
 	timeStr = make([]byte, 2)
 	then := time.Now()
-	frame := 0
-
-	drawNet()
-	drawPlayer(0, 8)
-	drawPlayer(62, 18)
-	drawBall(15, 10)
 
 	dt, err = rtc.ReadTime()
 	hour := dt.Hour()
@@ -98,78 +92,83 @@ func main() {
 	}
 
 	playerLoss := int8(0)
+	gameStopped := uint8(0)
 
 	for {
 		if time.Since(then).Nanoseconds() > 8000000 {
-			frame++
 			then = time.Now()
 			display.ClearDisplay()
 
-			ballX += ballVX
-			ballY += ballVY
+			if gameStopped < 20 {
+				gameStopped++
+			} else {
 
-			if (ballX >= 60 && playerLoss != 1) || (ballX <= 2 && playerLoss != -1) {
-				ballVX = -ballVX
-			} else if (ballX >= 62 && playerLoss == 1) || (ballX <= 0 && playerLoss == -1) {
-				// RESET GAME
-				ballX = float32(31)
-				ballY = rand.Float32()*16 + 8
-				ballVX = float32(1)
-				ballVY = float32(0.5)
-				if rand.Int31n(2) == 0 {
-					ballVY = -0.5
-				}
-				hour = dt.Hour()
-				minute = dt.Minute()
-				updateTime(uint8(hour), uint8(minute))
-				playerLoss = 0
-			}
-			if ballY >= 30 || ballY <= 0 {
-				ballVY = -ballVY
-			}
+				ballX += ballVX
+				ballY += ballVY
 
-			// AI ?
-			if ballX == float32(40+rand.Int31n(13)) {
-				leftPlayerTargetY = ballY - 3
-				if leftPlayerTargetY < 0 {
-					leftPlayerTargetY = 0
-				}
-				if leftPlayerTargetY > 24 {
-					leftPlayerTargetY = 24
-				}
-			}
-			if ballX == float32(8+rand.Int31n(13)) {
-				rightPlayerTargetY = ballY - 3
-				if rightPlayerTargetY < 0 {
-					rightPlayerTargetY = 0
-				}
-				if rightPlayerTargetY > 24 {
-					rightPlayerTargetY = 24
-				}
-			}
-
-			if int16(leftPlayerTargetY) > leftPlayerY {
-				leftPlayerY++
-			} else if int16(leftPlayerTargetY) < leftPlayerY {
-				leftPlayerY--
-			}
-
-			if int16(rightPlayerTargetY) > rightPlayerY {
-				rightPlayerY++
-			} else if int16(rightPlayerTargetY) < rightPlayerY {
-				rightPlayerY--
-			}
-
-			if ballX == 32 {
-				if ballVX < 0 { // moving to the left
-					leftPlayerTargetY = calculateEndPoint(ballX, ballY, ballVX, ballVY) - 3
-					if playerLoss == -1 {
-						if leftPlayerTargetY < 16 {
-							leftPlayerTargetY = 16 + 8*rand.Float32()
+				if (ballX >= 60 && playerLoss != 1) || (ballX <= 2 && playerLoss != -1) {
+					ballVX = -ballVX
+					tmp := rand.Int31n(4)
+					if tmp > 0 {
+						tmp = rand.Int31n(2)
+						if tmp == 0 {
+							if ballVY > 0 && ballVY < 2.5 {
+								ballVY += 0.2
+							} else if ballVY < 0 && ballVY > -2.5 {
+								ballVY -= 0.2
+							}
+							if ballX >= 60 {
+								rightPlayerTargetY += 1 + 3*rand.Float32()
+							} else {
+								leftPlayerTargetY += 1 + 3*rand.Float32()
+							}
 						} else {
-							leftPlayerTargetY = 8 * rand.Float32()
+							if ballVY > 0.5 {
+								ballVY -= 0.2
+							} else if ballVY < -0.5 {
+								ballVY += 0.2
+							}
+							if ballX >= 60 {
+								rightPlayerTargetY -= 1 + 3*rand.Float32()
+							} else {
+								leftPlayerTargetY -= 1 + 3*rand.Float32()
+							}
+						}
+						if leftPlayerTargetY < 0 {
+							leftPlayerTargetY = 0
+						}
+						if leftPlayerTargetY > 24 {
+							leftPlayerTargetY = 24
+						}
+						if rightPlayerTargetY < 0 {
+							rightPlayerTargetY = 0
+						}
+						if rightPlayerTargetY > 24 {
+							rightPlayerTargetY = 24
 						}
 					}
+				} else if (ballX > 62 && playerLoss == 1) || (ballX < 0 && playerLoss == -1) {
+					// RESET GAME
+					ballX = float32(31)
+					ballY = rand.Float32()*16 + 8
+					ballVX = float32(1)
+					ballVY = float32(0.5)
+					if rand.Int31n(2) == 0 {
+						ballVY = -0.5
+					}
+					hour = dt.Hour()
+					minute = dt.Minute()
+					updateTime(uint8(hour), uint8(minute))
+					playerLoss = 0
+					gameStopped = 0
+				}
+				if ballY >= 30 || ballY <= 0 {
+					ballVY = -ballVY
+				}
+
+				// AI ?
+				if ballX == float32(40+rand.Int31n(13)) {
+					leftPlayerTargetY = ballY - 3
 					if leftPlayerTargetY < 0 {
 						leftPlayerTargetY = 0
 					}
@@ -177,15 +176,8 @@ func main() {
 						leftPlayerTargetY = 24
 					}
 				}
-				if ballVX > 0 { // moving to the right
-					rightPlayerTargetY = calculateEndPoint(ballX, ballY, ballVX, ballVY) - 3
-					if playerLoss == 1 {
-						if rightPlayerTargetY < 16 {
-							rightPlayerTargetY = 16 + 8*rand.Float32()
-						} else {
-							rightPlayerTargetY = 8 * rand.Float32()
-						}
-					}
+				if ballX == float32(8+rand.Int31n(13)) {
+					rightPlayerTargetY = ballY - 3
 					if rightPlayerTargetY < 0 {
 						rightPlayerTargetY = 0
 					}
@@ -193,29 +185,80 @@ func main() {
 						rightPlayerTargetY = 24
 					}
 				}
-			}
 
+				if int16(leftPlayerTargetY) > leftPlayerY {
+					leftPlayerY++
+				} else if int16(leftPlayerTargetY) < leftPlayerY {
+					leftPlayerY--
+				}
+
+				if int16(rightPlayerTargetY) > rightPlayerY {
+					rightPlayerY++
+				} else if int16(rightPlayerTargetY) < rightPlayerY {
+					rightPlayerY--
+				}
+
+				if ballX == 32 {
+
+					dt, err = rtc.ReadTime()
+					if err != nil {
+						println("Error reading date:", err)
+						return
+					}
+					if minute != dt.Minute() && playerLoss == 0 { // needs to change one or the other
+						if dt.Minute() == 0 { // need to change hour
+							playerLoss = 1
+						} else { // need to change the minute
+							playerLoss = -1
+						}
+					}
+
+					if ballVX < 0 { // moving to the left
+						leftPlayerTargetY = calculateEndPoint(ballX, ballY, ballVX, ballVY, playerLoss != -1) - 3
+						if playerLoss == -1 {
+							if leftPlayerTargetY < 16 {
+								leftPlayerTargetY = 19 + 5*rand.Float32()
+							} else {
+								leftPlayerTargetY = 5 * rand.Float32()
+							}
+						}
+						if leftPlayerTargetY < 0 {
+							leftPlayerTargetY = 0
+						}
+						if leftPlayerTargetY > 24 {
+							leftPlayerTargetY = 24
+						}
+					}
+					if ballVX > 0 { // moving to the right
+						rightPlayerTargetY = calculateEndPoint(ballX, ballY, ballVX, ballVY, playerLoss != 1) - 3
+						if playerLoss == 1 {
+							if rightPlayerTargetY < 16 {
+								rightPlayerTargetY = 19 + 5*rand.Float32()
+							} else {
+								rightPlayerTargetY = 5 * rand.Float32()
+							}
+						}
+						if rightPlayerTargetY < 0 {
+							rightPlayerTargetY = 0
+						}
+						if rightPlayerTargetY > 24 {
+							rightPlayerTargetY = 24
+						}
+					}
+				}
+
+				if ballY < 0 {
+					ballY = 0
+				}
+				if ballY > 30 {
+					ballY = 30
+				}
+			}
 			drawNet()
 			drawPlayer(0, leftPlayerY)
 			drawPlayer(62, rightPlayerY)
 			drawBall(int16(ballX), int16(ballY))
 			updateTime(uint8(hour), uint8(minute))
-		}
-		if frame > 10 {
-			frame = 0
-			dt, err = rtc.ReadTime()
-			if err != nil {
-				println("Error reading date:", err)
-				return
-			}
-			println(dt.Second())
-			if minute != dt.Minute() && playerLoss == 0 { // needs to change one or the other
-				if dt.Minute() > 58 { // need to change hour
-					playerLoss = 1
-				} else { // need to change the minute
-					playerLoss = -1
-				}
-			}
 		}
 		display.Display()
 	}
@@ -242,12 +285,18 @@ func drawBall(x int16, y int16) {
 	display.SetPixel(x+1, y+1, colors[1])
 }
 
-func calculateEndPoint(x float32, y float32, vx float32, vy float32) (ty float32) {
+func calculateEndPoint(x float32, y float32, vx float32, vy float32, hit bool) (ty float32) {
 	for {
 		x += vx
 		y += vy
-		if x >= 60 || x <= 2 {
-			return y
+		if hit {
+			if x >= 60 || x <= 2 {
+				return y
+			}
+		} else {
+			if x >= 62 || x <= 0 {
+				return y
+			}
 		}
 		if y >= 30 || y <= 0 {
 			vy = -vy
