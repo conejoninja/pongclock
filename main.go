@@ -1,0 +1,274 @@
+package main
+
+import (
+	"machine"
+	"time"
+
+	"fmt"
+
+	"image/color"
+
+	"math/rand"
+
+	"github.com/conejoninja/tinyfont"
+	"github.com/tinygo-org/drivers/ds3231"
+	"github.com/tinygo-org/drivers/hub75"
+)
+
+var display hub75.Device
+var colors []color.RGBA
+var rtc ds3231.Device
+var dt time.Time
+var err error
+var timeStr []byte
+
+func main() {
+	machine.SPI1.Configure(machine.SPIConfig{
+		SCK:       machine.SPI0_SCK_PIN,
+		MOSI:      machine.SPI0_MOSI_PIN,
+		MISO:      machine.SPI0_MISO_PIN,
+		Frequency: 8000000,
+		Mode:      0})
+	machine.I2C0.Configure(machine.I2CConfig{})
+
+	display = hub75.New(machine.SPI1, 11, 12, 6, 10, 18, 20)
+	display.Configure(hub75.Config{
+		Width:      64,
+		Height:     32,
+		RowPattern: 16,
+		ColorDepth: 2,
+		FastUpdate: true,
+	})
+
+	rtc = ds3231.New(machine.I2C0)
+	rtc.Configure()
+
+	valid := rtc.IsTimeValid()
+	if !valid {
+		date := time.Date(2019, 12, 05, 20, 34, 12, 0, time.UTC)
+		rtc.SetTime(date)
+	}
+
+	running := rtc.IsRunning()
+	if !running {
+		err := rtc.SetRunning(true)
+		if err != nil {
+			fmt.Println("Error configuring RTC")
+		}
+	}
+
+	colors = []color.RGBA{
+		{255, 0, 0, 255},
+		{255, 255, 0, 255},
+		{0, 255, 0, 255},
+		{0, 255, 255, 255},
+		{0, 0, 255, 255},
+		{255, 0, 255, 255},
+		{255, 255, 255, 255},
+		{0, 0, 0, 255},
+	}
+
+	display.ClearDisplay()
+	display.SetBrightness(100)
+
+	timeStr = make([]byte, 2)
+	then := time.Now()
+	frame := 0
+
+	drawNet()
+	drawPlayer(0, 8)
+	drawPlayer(62, 18)
+	drawBall(15, 10)
+
+	dt, err = rtc.ReadTime()
+	hour := dt.Hour()
+	minute := dt.Minute()
+	updateTime(uint8(hour), uint8(minute))
+
+	ballX := float32(31)
+	ballY := rand.Float32()*16 + 8
+	leftPlayerTargetY := ballY
+	rightPlayerTargetY := ballY
+	leftPlayerY := int16(8)
+	rightPlayerY := int16(18)
+	ballVX := float32(1)
+	ballVY := float32(0.5)
+	if dt.Second() > 29 {
+		ballVY = -0.5
+	}
+
+	playerLoss := int8(0)
+
+	for {
+		if time.Since(then).Nanoseconds() > 8000000 {
+			frame++
+			then = time.Now()
+			display.ClearDisplay()
+
+			ballX += ballVX
+			ballY += ballVY
+
+			if (ballX >= 60 && playerLoss != 1) || (ballX <= 2 && playerLoss != -1) {
+				ballVX = -ballVX
+			} else if (ballX >= 62 && playerLoss == 1) || (ballX <= 0 && playerLoss == -1) {
+				// RESET GAME
+				ballX = float32(31)
+				ballY = rand.Float32()*16 + 8
+				ballVX = float32(1)
+				ballVY = float32(0.5)
+				if rand.Int31n(2) == 0 {
+					ballVY = -0.5
+				}
+				hour = dt.Hour()
+				minute = dt.Minute()
+				updateTime(uint8(hour), uint8(minute))
+				playerLoss = 0
+			}
+			if ballY >= 30 || ballY <= 0 {
+				ballVY = -ballVY
+			}
+
+			// AI ?
+			if ballX == float32(40+rand.Int31n(13)) {
+				leftPlayerTargetY = ballY - 3
+				if leftPlayerTargetY < 0 {
+					leftPlayerTargetY = 0
+				}
+				if leftPlayerTargetY > 24 {
+					leftPlayerTargetY = 24
+				}
+			}
+			if ballX == float32(8+rand.Int31n(13)) {
+				rightPlayerTargetY = ballY - 3
+				if rightPlayerTargetY < 0 {
+					rightPlayerTargetY = 0
+				}
+				if rightPlayerTargetY > 24 {
+					rightPlayerTargetY = 24
+				}
+			}
+
+			if int16(leftPlayerTargetY) > leftPlayerY {
+				leftPlayerY++
+			} else if int16(leftPlayerTargetY) < leftPlayerY {
+				leftPlayerY--
+			}
+
+			if int16(rightPlayerTargetY) > rightPlayerY {
+				rightPlayerY++
+			} else if int16(rightPlayerTargetY) < rightPlayerY {
+				rightPlayerY--
+			}
+
+			if ballX == 32 {
+				if ballVX < 0 { // moving to the left
+					leftPlayerTargetY = calculateEndPoint(ballX, ballY, ballVX, ballVY) - 3
+					if playerLoss == -1 {
+						if leftPlayerTargetY < 16 {
+							leftPlayerTargetY = 16 + 8*rand.Float32()
+						} else {
+							leftPlayerTargetY = 8 * rand.Float32()
+						}
+					}
+					if leftPlayerTargetY < 0 {
+						leftPlayerTargetY = 0
+					}
+					if leftPlayerTargetY > 24 {
+						leftPlayerTargetY = 24
+					}
+				}
+				if ballVX > 0 { // moving to the right
+					rightPlayerTargetY = calculateEndPoint(ballX, ballY, ballVX, ballVY) - 3
+					if playerLoss == 1 {
+						if rightPlayerTargetY < 16 {
+							rightPlayerTargetY = 16 + 8*rand.Float32()
+						} else {
+							rightPlayerTargetY = 8 * rand.Float32()
+						}
+					}
+					if rightPlayerTargetY < 0 {
+						rightPlayerTargetY = 0
+					}
+					if rightPlayerTargetY > 24 {
+						rightPlayerTargetY = 24
+					}
+				}
+			}
+
+			drawNet()
+			drawPlayer(0, leftPlayerY)
+			drawPlayer(62, rightPlayerY)
+			drawBall(int16(ballX), int16(ballY))
+			updateTime(uint8(hour), uint8(minute))
+		}
+		if frame > 10 {
+			frame = 0
+			dt, err = rtc.ReadTime()
+			if err != nil {
+				println("Error reading date:", err)
+				return
+			}
+			println(dt.Second())
+			if minute != dt.Minute() && playerLoss == 0 { // needs to change one or the other
+				if dt.Minute() > 58 { // need to change hour
+					playerLoss = 1
+				} else { // need to change the minute
+					playerLoss = -1
+				}
+			}
+		}
+		display.Display()
+	}
+}
+
+func drawNet() {
+	for i := int16(1); i < 32; i += 2 {
+		display.SetPixel(31, i, colors[6])
+	}
+}
+
+func drawPlayer(x int16, y int16) {
+	for i := int16(0); i < 2; i++ {
+		for j := int16(0); j < 8; j++ {
+			display.SetPixel(x+i, y+j, colors[3])
+		}
+	}
+}
+
+func drawBall(x int16, y int16) {
+	display.SetPixel(x, y, colors[1])
+	display.SetPixel(x+1, y, colors[1])
+	display.SetPixel(x, y+1, colors[1])
+	display.SetPixel(x+1, y+1, colors[1])
+}
+
+func calculateEndPoint(x float32, y float32, vx float32, vy float32) (ty float32) {
+	for {
+		x += vx
+		y += vy
+		if x >= 60 || x <= 2 {
+			return y
+		}
+		if y >= 30 || y <= 0 {
+			vy = -vy
+		}
+	}
+}
+
+func updateTime(hour uint8, minute uint8) {
+	timeStr[1] = 48 + (hour % 10)
+	if hour > 9 {
+		timeStr[0] = 48 + (hour / 10)
+	} else {
+		timeStr[0] = 32
+	}
+	tinyfont.WriteLine(&display, &tinyfont.TomThumb, 23, 5, timeStr, colors[6])
+
+	timeStr[1] = 48 + (minute % 10)
+	if minute > 9 {
+		timeStr[0] = 48 + (minute / 10)
+	} else {
+		timeStr[0] = 48
+	}
+	tinyfont.WriteLine(&display, &tinyfont.TomThumb, 33, 5, timeStr, colors[6])
+}
