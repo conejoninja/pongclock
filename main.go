@@ -11,11 +11,12 @@ import (
 	"math/rand"
 
 	"github.com/conejoninja/tinyfont"
+	"github.com/tinygo-org/drivers"
 	"github.com/tinygo-org/drivers/ds3231"
 	"github.com/tinygo-org/drivers/hub75"
 )
 
-var display hub75.Device
+var display drivers.Displayer
 var colors []color.RGBA
 var rtc ds3231.Device
 var dt time.Time
@@ -311,7 +312,7 @@ func updateTime(hour uint8, minute uint8) {
 	} else {
 		timeStr[0] = 32
 	}
-	tinyfont.WriteLine(&display, &tinyfont.TomThumb, 23, 5, timeStr, colors[6])
+	tinyfont.WriteLine(display, &tinyfont.TomThumb, 23, 5, timeStr, colors[6])
 
 	timeStr[1] = 48 + (minute % 10)
 	if minute > 9 {
@@ -319,5 +320,5 @@ func updateTime(hour uint8, minute uint8) {
 	} else {
 		timeStr[0] = 48
 	}
-	tinyfont.WriteLine(&display, &tinyfont.TomThumb, 33, 5, timeStr, colors[6])
+	tinyfont.WriteLine(display, &tinyfont.TomThumb, 33, 5, timeStr, colors[6])
 }
