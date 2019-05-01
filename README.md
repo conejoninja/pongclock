@@ -2,6 +2,8 @@ PONG clock
 ==========
 Show the time while playing a game of PONG.
 
+![PONG clock](https://github.com/conejoninja/pongclock/blob/master/img/pongclock.png)
+
 [Youtube video](https://www.youtube.com/watch?v=r6KoyicwPws).
 
 ## License
