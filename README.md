@@ -16,6 +16,12 @@ This clock should not be used for time-sensitive tasks as it might run a couple 
 * [HUB75 64x32 RGB LED matrix](https://www.aliexpress.com/item/64x32-indoor-RGB-hd-p4-indoor-led-module-video-wall-high-quality-P2-5-P3-P4/32754106669.html?spm=a2g0s.9042311.0.0.54c04c4dZbsVul)
 * dupont female headers, wires and solder
 
+## Circuit and connections
+
+Connect the RTC DS3231 to the I²C interface (bottom right corner of the sensor:bit expansion board). The rest of the pins as described in the [microbit_connections.md](https://github.com/conejoninja/pongclock/blob/master/microbit_connections.md) file or the following image:
+
+![Schematic](https://raw.githubusercontent.com/conejoninja/pongclock/master/img/schematic.png)
+
 ## License
 
 The MIT License (MIT)
