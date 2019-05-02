@@ -18,9 +18,11 @@ This clock should not be used for time-sensitive tasks as it might run a couple 
 
 ## Circuit and connections
 
-Connect the RTC DS3231 to the I²C interface (bottom right corner of the sensor:bit expansion board). The rest of the pins as described in the [microbit_connections.md](https://github.com/conejoninja/pongclock/blob/master/microbit_connections.md) file or the following image:
+Connect the RTC DS3231 to the I²C interface (bottom right corner of the sensor:bit expansion board). The rest of the pins as described in the [microbit_connections.md](https://github.com/conejoninja/pongclock/blob/master/microbit_connections.md) file or the following image, be aware there are some connections between the two connectors of the RGB matrix and between the left one and the microbit expansion board:
 
 ![Schematic](https://raw.githubusercontent.com/conejoninja/pongclock/master/img/schematic.png)
+
+
 
 ## License
 
