@@ -10,8 +10,8 @@ You will find some differences among the multiples versions of _hub75_ matrices,
 | P9 | B |
 | P10 | A |
 | P12 | D |
-| P13 | CLK |
-| P15 | R0 |
+| P13 /SCK | CLK |
+| P15 / MOSI| R0 |
 | GND | GND |
 
 Additionally you need to connect some pins from the left, to the right one.

@@ -11,12 +11,11 @@ import (
 	"math/rand"
 
 	"github.com/conejoninja/tinyfont"
-	"github.com/tinygo-org/drivers"
 	"github.com/tinygo-org/drivers/ds3231"
 	"github.com/tinygo-org/drivers/hub75"
 )
 
-var display drivers.Displayer
+var display hub75.Device
 var colors []color.RGBA
 var rtc ds3231.Device
 var dt time.Time
@@ -24,12 +23,14 @@ var err error
 var timeStr []byte
 
 func main() {
+	// SPI for the hub75
 	machine.SPI1.Configure(machine.SPIConfig{
 		SCK:       machine.SPI0_SCK_PIN,
 		MOSI:      machine.SPI0_MOSI_PIN,
 		MISO:      machine.SPI0_MISO_PIN,
 		Frequency: 8000000,
 		Mode:      0})
+	// I2C for the RTC DS3231
 	machine.I2C0.Configure(machine.I2CConfig{})
 
 	display = hub75.New(machine.SPI1, 11, 12, 6, 10, 18, 20)
@@ -44,6 +45,7 @@ func main() {
 	rtc = ds3231.New(machine.I2C0)
 	rtc.Configure()
 
+	// Check if the RTC is working properly
 	valid := rtc.IsTimeValid()
 	if !valid {
 		date := time.Date(2019, 12, 05, 20, 34, 12, 0, time.UTC)
@@ -109,7 +111,7 @@ func main() {
 
 				if (ballX >= 60 && playerLoss != 1) || (ballX <= 2 && playerLoss != -1) {
 					ballVX = -ballVX
-					tmp := rand.Int31n(4)
+					tmp := rand.Int31n(4)    // perform a random, last second flick to inflict effect on the ball
 					if tmp > 0 {
 						tmp = rand.Int31n(2)
 						if tmp == 0 {
@@ -167,7 +169,7 @@ func main() {
 					ballVY = -ballVY
 				}
 
-				// AI ?
+				// when the ball is on the other side of the court, move the player "randomly" to simulate an AI
 				if ballX == float32(40+rand.Int31n(13)) {
 					leftPlayerTargetY = ballY - 3
 					if leftPlayerTargetY < 0 {
@@ -199,6 +201,7 @@ func main() {
 					rightPlayerY--
 				}
 
+				// If the ball is in the middle, check if we need to lose and calculate the endpoint to avoid/hit the ball
 				if ballX == 32 {
 
 					dt, err = rtc.ReadTime()
@@ -216,7 +219,7 @@ func main() {
 
 					if ballVX < 0 { // moving to the left
 						leftPlayerTargetY = calculateEndPoint(ballX, ballY, ballVX, ballVY, playerLoss != -1) - 3
-						if playerLoss == -1 {
+						if playerLoss == -1 {  // we need to lose
 							if leftPlayerTargetY < 16 {
 								leftPlayerTargetY = 19 + 5*rand.Float32()
 							} else {
@@ -232,7 +235,7 @@ func main() {
 					}
 					if ballVX > 0 { // moving to the right
 						rightPlayerTargetY = calculateEndPoint(ballX, ballY, ballVX, ballVY, playerLoss != 1) - 3
-						if playerLoss == 1 {
+						if playerLoss == 1 {  // we need to lose
 							if rightPlayerTargetY < 16 {
 								rightPlayerTargetY = 19 + 5*rand.Float32()
 							} else {
@@ -255,6 +258,7 @@ func main() {
 					ballY = 30
 				}
 			}
+			// show stuff on the display
 			drawNet()
 			drawPlayer(0, leftPlayerY)
 			drawPlayer(62, rightPlayerY)
