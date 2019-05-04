@@ -4,8 +4,6 @@ import (
 	"machine"
 	"time"
 
-	"fmt"
-
 	"image/color"
 
 	"math/rand"
@@ -56,7 +54,7 @@ func main() {
 	if !running {
 		err := rtc.SetRunning(true)
 		if err != nil {
-			fmt.Println("Error configuring RTC")
+			println("Error configuring RTC")
 		}
 	}
 
@@ -111,7 +109,7 @@ func main() {
 
 				if (ballX >= 60 && playerLoss != 1) || (ballX <= 2 && playerLoss != -1) {
 					ballVX = -ballVX
-					tmp := rand.Int31n(4)    // perform a random, last second flick to inflict effect on the ball
+					tmp := rand.Int31n(4) // perform a random, last second flick to inflict effect on the ball
 					if tmp > 0 {
 						tmp = rand.Int31n(2)
 						if tmp == 0 {
@@ -219,7 +217,7 @@ func main() {
 
 					if ballVX < 0 { // moving to the left
 						leftPlayerTargetY = calculateEndPoint(ballX, ballY, ballVX, ballVY, playerLoss != -1) - 3
-						if playerLoss == -1 {  // we need to lose
+						if playerLoss == -1 { // we need to lose
 							if leftPlayerTargetY < 16 {
 								leftPlayerTargetY = 19 + 5*rand.Float32()
 							} else {
@@ -235,7 +233,7 @@ func main() {
 					}
 					if ballVX > 0 { // moving to the right
 						rightPlayerTargetY = calculateEndPoint(ballX, ballY, ballVX, ballVY, playerLoss != 1) - 3
-						if playerLoss == 1 {  // we need to lose
+						if playerLoss == 1 { // we need to lose
 							if rightPlayerTargetY < 16 {
 								rightPlayerTargetY = 19 + 5*rand.Float32()
 							} else {
@@ -316,7 +314,7 @@ func updateTime(hour uint8, minute uint8) {
 	} else {
 		timeStr[0] = 32
 	}
-	tinyfont.WriteLine(display, &tinyfont.TomThumb, 23, 5, timeStr, colors[6])
+	tinyfont.WriteLine(&display, &tinyfont.TomThumb, 23, 5, timeStr, colors[6])
 
 	timeStr[1] = 48 + (minute % 10)
 	if minute > 9 {
@@ -324,5 +322,5 @@ func updateTime(hour uint8, minute uint8) {
 	} else {
 		timeStr[0] = 48
 	}
-	tinyfont.WriteLine(display, &tinyfont.TomThumb, 33, 5, timeStr, colors[6])
+	tinyfont.WriteLine(&display, &tinyfont.TomThumb, 33, 5, timeStr, colors[6])
 }
