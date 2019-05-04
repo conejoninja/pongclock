@@ -23,6 +23,10 @@ Connect the RTC DS3231 to the I²C interface (bottom right corner of the sensor:
 ![Schematic](https://raw.githubusercontent.com/conejoninja/pongclock/master/img/schematic.png)
 
 
+## 3D printed cover
+
+I made a simple [3D printed cover](https://github.com/conejoninja/pongclock/blob/master/3Dfiles/back.cover.stl). There are 3 tabs pre-cut to pass the power cable if needed, two at the sides and one at the bottom. There's also three holes for screw hooks on top.
+
 
 ## License
 
